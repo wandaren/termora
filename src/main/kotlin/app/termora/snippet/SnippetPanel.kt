@@ -85,8 +85,15 @@ class SnippetPanel : JPanel(BorderLayout()), Disposable {
                 cardLayout.show(rightPanel, "Banner")
             } else {
                 cardLayout.show(rightPanel, "Editor")
-                editor.textArea.text = lastNode.data.snippet
-                editor.resetUndo()
+                // 切换 snippet 时禁用 DocumentListener，避免 setText 内部的
+                // remove→insert 过程中用中间空状态覆盖数据库内容
+                editor.suspendDocumentListener = true
+                try {
+                    editor.textArea.text = lastNode.data.snippet
+                    editor.resetUndo()
+                } finally {
+                    editor.suspendDocumentListener = false
+                }
             }
         }
 
@@ -120,6 +127,12 @@ class SnippetPanel : JPanel(BorderLayout()), Disposable {
     private inner class SnippetEditor : JPanel(BorderLayout()) {
         val textArea = FlatTextArea()
         private var undoManager = UndoManager()
+        /**
+         * 为 true 时暂停 DocumentListener 的保存逻辑，
+         * 用于切换 snippet 时 setText 避免用中间空状态覆盖数据库内容
+         */
+        @Volatile
+        var suspendDocumentListener = false
 
         init {
             initViews()
@@ -172,6 +185,7 @@ class SnippetPanel : JPanel(BorderLayout()), Disposable {
 
             textArea.document.addDocumentListener(object : DocumentAdaptor() {
                 override fun changedUpdate(e: DocumentEvent) {
+                    if (suspendDocumentListener) return
                     val lastNode = lastNode ?: return
                     lastNode.data = lastNode.data.copy(snippet = textArea.text, updateDate = System.currentTimeMillis())
                     snippetManager.addSnippet(lastNode.data)

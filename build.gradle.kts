@@ -369,6 +369,15 @@ tasks.register<Exec>("jlink") {
 
 tasks.register<Exec>("jpackage") {
 
+    // jpackage 通过 --input build/libs 打包，必须先准备好依赖 jar
+    dependsOn("jar", "copy-dependencies")
+    // --app-content build/plugins 需要各插件模块先构建出 jar 到 build/plugins/<name>/
+    // subprojects 的 build 任务负责把插件 jar 复制到那里
+    // 跳过中间聚合项目 :plugins（没有源码），直接构建叶子插件模块
+    subprojects
+        .filter { it.path != ":plugins" }
+        .forEach { dependsOn("${it.path}:build") }
+
     val buildDir = layout.buildDirectory.get()
     val options = mutableListOf(
         "-Xmx2048m",
@@ -456,6 +465,9 @@ tasks.register<Exec>("jpackage") {
 }
 
 tasks.register("dist") {
+    // dist 依赖 jpackage 产出的 dmg/zip，必须等 jpackage 完成
+    dependsOn("jpackage")
+
     doLast {
         val osName = if (os.isMacOsX) "osx" else if (os.isWindows) "windows" else "linux"
         val distributionDir = layout.buildDirectory.dir("distributions").get()

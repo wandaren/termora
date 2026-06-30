@@ -21,6 +21,17 @@ val pluginXmlProperties = mapOf(
     "rootProjectVersion" to rootProjectVersion,
 )
 
+tasks.named<JavaCompile>("compileJava") {
+    // compileJava 依赖根项目 jar（compileOnly(project(":"))），
+    // 而 jar 通过 copy-dependencies 暴露到 build/libs，需要显式声明依赖避免隐式依赖校验
+    dependsOn(rootProject.tasks.named("copy-dependencies"))
+}
+
+tasks.named("compileKotlin") {
+    // 同上，Kotlin 编译同样依赖根项目 jar
+    dependsOn(rootProject.tasks.named("copy-dependencies"))
+}
+
 tasks.withType<Jar>().configureEach {
 
     manifest {
