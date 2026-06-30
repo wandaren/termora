@@ -121,12 +121,28 @@ class HostManager private constructor() : Disposable {
         }
 
         // 导入新主机，更新 ownerId 和 ownerType 为当前用户
+        // 注意：不能使用 addHost → saveAndIncrementVersion，
+        // 因为 saveAndIncrementVersion 会跳过已标记为 deleted 的记录，
+        // 导致"替换所有"模式下重复导入同一文件时数据无法恢复（静默失败）。
+        // 这里直接使用 save 强制覆盖，并保留 version 递增语义。
         importData.hosts.forEach { host ->
             val updatedHost = host.copy(
                 ownerId = currentOwnerId,
-                ownerType = currentOwnerType
+                ownerType = currentOwnerType,
+                deleted = false
             )
-            addHost(updatedHost, DatabaseChangedExtension.Source.User)
+            val existing = databaseManager.data(updatedHost.id)
+            databaseManager.save(
+                Data(
+                    id = updatedHost.id,
+                    ownerId = updatedHost.ownerId,
+                    ownerType = updatedHost.ownerType,
+                    type = DataType.Host.name,
+                    data = ohMyJson.encodeToString(updatedHost),
+                    version = if (existing != null) existing.version + 1 else 0,
+                ),
+                DatabaseChangedExtension.Source.User
+            )
         }
 
         return importData.hosts.size

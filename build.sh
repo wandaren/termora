@@ -1,0 +1,1 @@
+./gradlew clean build jlink jpackage dist -x test
