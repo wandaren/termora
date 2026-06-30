@@ -70,9 +70,16 @@ class HostManager private constructor() : Disposable {
 
     /**
      * 导出所有主机配置到JSON文件
+     * @throws IllegalStateException 如果没有主机数据可导出
      */
     fun exportHosts(file: File) {
         val hosts = hosts()
+
+        // 防止导出空文件
+        if (hosts.isEmpty()) {
+            throw IllegalStateException("No hosts to export")
+        }
+
         val exportData = HostExportData(
             version = 1,
             exportDate = System.currentTimeMillis(),
@@ -87,11 +94,17 @@ class HostManager private constructor() : Disposable {
      * @param file 要导入的文件
      * @param replaceAll true=替换所有现有主机，false=合并（保留现有主机）
      * @return 导入的主机数量
+     * @throws IllegalArgumentException 如果导入的文件为空
      */
     fun importHosts(file: File, replaceAll: Boolean): Int {
         assertEventDispatchThread()
         val json = Files.readString(file.toPath())
         val importData = ohMyJson.decodeFromString<HostExportData>(json)
+
+        // 防止导入空文件
+        if (importData.hosts.isEmpty()) {
+            throw IllegalArgumentException("Import file contains no hosts")
+        }
 
         // 获取当前账户的 ownerId
         // 优先使用账户管理器的ID，如果是本地账户则使用 "0"
