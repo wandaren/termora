@@ -1,14 +1,18 @@
 package app.termora.terminal
 
-import java.util.*
+import kotlin.math.max
 
 @Suppress("MemberVisibilityCanBePrivate")
 class TerminalReader {
-    private val buffer = ArrayDeque<Char>()
+    private var buffer = CharArray(1024)
+    private var head = 0
+    private var size = 0
 
 
     fun addLast(char: Char) {
-        buffer.addLast(char)
+        ensureCapacity(size + 1)
+        buffer[index(size)] = char
+        size++
     }
 
     fun addFirst(chars: List<Char>) {
@@ -19,36 +23,57 @@ class TerminalReader {
 
 
     fun addLast(chars: List<Char>) {
-        buffer.addAll(chars)
+        ensureCapacity(size + chars.size)
+        for (i in chars.indices) {
+            buffer[index(size + i)] = chars[i]
+        }
+        size += chars.size
     }
 
     fun addFirst(ch: Char) {
-        buffer.addFirst(ch)
+        ensureCapacity(size + 1)
+        head = if (head == 0) buffer.size - 1 else head - 1
+        buffer[head] = ch
+        size++
     }
 
     fun addLast(text: String) {
-        text.forEach { addLast(it) }
+        ensureCapacity(size + text.length)
+        for (i in text.indices) {
+            buffer[index(size + i)] = text[i]
+        }
+        size += text.length
     }
 
     fun read(): Char {
-        return buffer.removeFirst()
+        if (isEmpty()) {
+            throw NoSuchElementException()
+        }
+        val ch = buffer[head]
+        head = (head + 1) % buffer.size
+        size--
+        if (size == 0) {
+            head = 0
+        }
+        return ch
     }
 
     fun peek(): Char? {
-        return buffer.peekFirst()
+        return if (isEmpty()) null else buffer[head]
     }
 
     fun isEmpty(): Boolean {
-        return buffer.isEmpty()
+        return size == 0
     }
 
     fun isNotEmpty(): Boolean {
-        return buffer.isNotEmpty()
+        return size > 0
     }
 
     override fun toString(): String {
         val sb = StringBuilder()
-        for (c in buffer) {
+        for (i in 0 until size) {
+            val c = buffer[index(i)]
             when (c) {
                 ControlCharacters.TAB -> sb.append("TAB")
                 ControlCharacters.ESC -> sb.append("ESC")
@@ -61,7 +86,23 @@ class TerminalReader {
     }
 
     fun clear() {
-        buffer.clear()
+        head = 0
+        size = 0
+    }
+
+    private fun index(offset: Int): Int {
+        return (head + offset) % buffer.size
+    }
+
+    private fun ensureCapacity(capacity: Int) {
+        if (capacity <= buffer.size) return
+
+        val newBuffer = CharArray(max(buffer.size shl 1, capacity))
+        for (i in 0 until size) {
+            newBuffer[i] = buffer[index(i)]
+        }
+        buffer = newBuffer
+        head = 0
     }
 
 

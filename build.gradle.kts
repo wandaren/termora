@@ -125,8 +125,10 @@ dependencies {
 application {
     val args = mutableListOf(
         "-Xmx2048m",
-        "-Drelease-date=${DateFormatUtils.format(Date(), "yyyy-MM-dd")}",
-        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+        "-XX:+UseZGC",
+        "-XX:+ZUncommit",
+        "-XX:ZUncommitDelay=60",
+        "-Drelease-date=${DateFormatUtils.format(Date(), "yyyy-MM-dd")}"
     )
 
     if (os.isMacOsX) {
@@ -381,6 +383,9 @@ tasks.register<Exec>("jpackage") {
     val buildDir = layout.buildDirectory.get()
     val options = mutableListOf(
         "-Xmx2048m",
+        "-XX:+UseZGC",
+        "-XX:+ZUncommit",
+        "-XX:ZUncommitDelay=60",
         "-XX:+HeapDumpOnOutOfMemoryError",
         "-Dlogger.console.level=off",
         "-Dkotlinx.coroutines.debug=off",

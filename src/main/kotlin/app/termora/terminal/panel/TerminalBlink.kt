@@ -57,6 +57,10 @@ class TerminalBlink(terminal: Terminal) : Disposable {
 
         cursorBlink = true
         cursorBlinkJob?.cancel()
+        if (!terminalSettings.cursorBlink) {
+            cursorBlinkJob = null
+            return
+        }
         cursorBlinkJob = coroutineScope.launch {
             while (coroutineScope.isActive) {
 
@@ -67,11 +71,12 @@ class TerminalBlink(terminal: Terminal) : Disposable {
                 }
 
                 // 如果开启了光标闪烁才闪速
-                cursorBlink = if (terminalSettings.cursorBlink) {
-                    !cursorBlink
-                } else {
-                    true
+                if (!terminalSettings.cursorBlink) {
+                    cursorBlink = true
+                    cursorBlinkJob = null
+                    break
                 }
+                cursorBlink = !cursorBlink
 
             }
         }
